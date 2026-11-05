@@ -57,14 +57,8 @@ input[type=email]:focus{border-color:var(--teal);outline:none}
 var CONFIG = {
   site: "https://www.learnwitheveryavenue.com",
   algolia: {appId:"V4Z6530MZ3", apiKey:"764e5cea43bb0f0373d65fd3a9edcfa1", index:"BD_class_posts"},
-  mailerlite: {
-    accountId: "2280496",
-    formId: "185345937360553843",   // LWEA Parents form (adds to LWEA Parents group, triggers Parent Emails Workflow)
-    resultField: "quiz_result",
-    resultKeyField: "quiz_result_key",
-    resultPageField: "quiz_result_page",            // custom text field, must exist in MailerLite
-    gradeField: "grade_level"              // existing field
-  },
+  // Signup endpoint on the LWEA server (adds the subscriber to MailerLite). See lwea-quiz-subscribe.php.
+  endpoint: "https://www.learnwitheveryavenue.com/lwea-quiz-subscribe.php",
   // Flip live to true and set url when Build Your Learning Life launches. Hidden until then.
   course: {live:false, url:"", title:"Build Your Learning Life"},
   utm: "utm_source=quiz&utm_medium=web&utm_campaign=educator-diagnostic"
@@ -205,28 +199,35 @@ function gate(){
   '<p>You\'ll see your match on the next screen, along with the questions to ask an educator on a first call. We\'ll also email you our free guide, How to Find an Independent Educator.</p>'+
   '<form id="f"><input type="email" id="em" placeholder="you@email.com" required autocomplete="email">'+
   '<label class="consent"><input type="checkbox" id="cs" required><span>Yes, email me the guide and occasional notes from Learn with Every Avenue. Unsubscribe anytime.</span></label>'+
+  '<input type="text" id="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">'+
   '<div class="err hide" id="er"></div><button class="btn" id="sb" type="submit">Show my result</button></form>';
   document.getElementById("f").onsubmit=function(e){
     e.preventDefault();
+    var er=document.getElementById("er"), sb=document.getElementById("sb");
     var em=document.getElementById("em").value.trim();
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){var er=document.getElementById("er");er.textContent="That email doesn't look right.";er.className="err";return;}
-    state.email=em; document.getElementById("sb").disabled=true;
-    subscribe(em).then(function(){track("quiz_email",{result:state.result.key});showResult();});
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){er.textContent="That email doesn't look right.";er.className="err";return;}
+    state.email=em; sb.disabled=true; er.className="err hide";
+    subscribe(em).then(function(res){
+      if(res&&res.ok){track("quiz_email",{result:state.result.key});showResult();return;}
+      track("quiz_email_failed",{result:state.result.key});
+      sb.disabled=false;
+      er.innerHTML="We couldn't save your email just now, so the guide won't be sent yet. Please try again. <a href=\"#\" id=\"sk\">View my result anyway</a>";
+      er.className="err";
+      document.getElementById("sk").onclick=function(ev){ev.preventDefault();track("quiz_email_skipped",{result:state.result.key});showResult();};
+    });
   };
 }
 function subscribe(email){
-  var m=CONFIG.mailerlite;
-  if(!m.formId||m.formId.indexOf("REPLACE")===0) return Promise.resolve();
   var age=Q[3].o[state.ans[3]];
   var body=new URLSearchParams();
-  body.append("fields[email]",email);
-  body.append("fields["+m.resultField+"]",R[state.result.key].name);
-  body.append("fields["+m.resultKeyField+"]",state.result.key);
-  body.append("fields["+m.resultPageField+"]",CONFIG.site+R[state.result.key].page);
-  body.append("fields["+m.gradeField+"]",age.gl);
-  body.append("ml-submit","1"); body.append("anticsrf","true");
-  return fetch("https://assets.mailerlite.com/jsonp/"+m.accountId+"/forms/"+m.formId+"/subscribe",
-    {method:"POST",mode:"no-cors",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:body.toString()}).catch(function(){});
+  body.append("email",email);
+  body.append("result",state.result.key);
+  body.append("grade",age.gl);
+  body.append("consent","1");
+  body.append("website",document.getElementById("hp").value);
+  return fetch(CONFIG.endpoint,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:body.toString()})
+    .then(function(r){return r.json().catch(function(){return {ok:false};});})
+    .catch(function(){return {ok:false};});
 }
 function showResult(){
   var r=R[state.result.key], age=Q[3].o[state.ans[3]]||null;
