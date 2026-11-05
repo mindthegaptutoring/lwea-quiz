@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What kind of educator fits your kid? | Learn with Every Avenue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#131D2D;--teal:#2AB7A9;--coral:#F8596A;--bg:#F6F8F9;--line:#DDE3E8;--muted:#5B6776}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Lexend Deca',system-ui,sans-serif;color:var(--navy);background:var(--bg);line-height:1.5}
+.wrap{max-width:640px;margin:0 auto;padding:24px 16px 40px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:28px 24px}
+h1{font-size:26px;line-height:1.25;margin:0 0 12px}
+h2{font-size:21px;line-height:1.3;margin:0 0 16px}
+p{margin:0 0 14px}
+.muted{color:var(--muted);font-size:14px}
+.btn{display:inline-block;background:var(--coral);color:#fff;border:0;border-radius:10px;padding:14px 22px;font:600 16px 'Lexend Deca',sans-serif;cursor:pointer;text-decoration:none}
+.btn:hover{filter:brightness(.95)}
+.btn.alt{background:#fff;color:var(--navy);border:2px solid var(--navy)}
+.btn[disabled]{opacity:.6;cursor:wait}
+.bar{height:6px;background:var(--line);border-radius:3px;margin-bottom:20px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--teal);width:0;transition:width .25s}
+.opt{display:block;width:100%;text-align:left;background:#fff;border:2px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;font:500 15px 'Lexend Deca',sans-serif;color:var(--navy);cursor:pointer}
+.opt:hover,.opt:focus{border-color:var(--teal);outline:none}
+.back{background:none;border:0;color:var(--muted);font:14px 'Lexend Deca',sans-serif;cursor:pointer;padding:8px 0 0}
+input[type=email]{width:100%;padding:14px;border:2px solid var(--line);border-radius:10px;font:16px 'Lexend Deca',sans-serif;margin-bottom:12px}
+input[type=email]:focus{border-color:var(--teal);outline:none}
+.consent{display:flex;gap:10px;font-size:13px;color:var(--muted);margin-bottom:16px;align-items:flex-start}
+.consent input{margin-top:3px}
+.tag{display:inline-block;background:var(--teal);color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;letter-spacing:.03em;margin-bottom:12px}
+.list{margin:0 0 16px;padding-left:20px}
+.list li{margin-bottom:6px}
+.box{background:var(--bg);border-radius:12px;padding:16px;margin:16px 0}
+.box h3{font-size:15px;margin:0 0 8px}
+.lst{display:flex;gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px;text-decoration:none;color:var(--navy);background:#fff}
+.lst img{width:72px;height:72px;object-fit:cover;border-radius:8px;flex:none;background:var(--line)}
+.lst b{display:block;font-size:14px;line-height:1.3}
+.lst span{font-size:12px;color:var(--muted)}
+.hide{display:none}
+.err{color:#b3261e;font-size:13px;margin:-4px 0 10px}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card" id="app"></div></div>
+
+<script>
+/* ===== CONFIG ===== */
+var CONFIG = {
+  site: "https://www.learnwitheveryavenue.com",
+  algolia: {appId:"V4Z6530MZ3", apiKey:"764e5cea43bb0f0373d65fd3a9edcfa1", index:"BD_class_posts"},
+  mailerlite: {
+    accountId: "2280496",
+    formId: "188017441370014988",   // "Article form - no guide mailing list" (email only). Swap for a dedicated quiz form when created.
+    resultField: "quiz_result",
+    resultKeyField: "quiz_result_key",            // custom text field, must exist in MailerLite
+    gradeField: "grade_level"              // existing field
+  },
+  // Flip live to true and set url when Build Your Learning Life launches. Hidden until then.
+  course: {live:false, url:"", title:"Build Your Learning Life"},
+  utm: "utm_source=quiz&utm_medium=web&utm_campaign=educator-diagnostic"
+};
+
+/* ===== CONTENT ===== */
+var Q = [
+  {id:"wall", t:"When your kid hits a wall, what does it usually look like?", o:[
+    {l:"They get stuck, shut down, and need someone sitting right with them", s:{one:3}, tb:"one"},
+    {l:"They light up around other kids and fade when learning alone", s:{group:3}, tb:"group"},
+    {l:"Our schedule keeps changing, so anything fixed falls apart", s:{self:3}, tb:"self"},
+    {l:"They can work independently but drift without a check-in", s:{hybrid:3,coaching:1}, tb:"hybrid"}
+  ]},
+  {id:"schedule", t:"What does your week look like?", o:[
+    {l:"Predictable. We could commit to a set weekly time", s:{one:2,group:2}},
+    {l:"Mostly predictable, with some travel or disruptions", s:{hybrid:2,group:1,one:1}},
+    {l:"On the move. Time zones and plans shift a lot", s:{self:2,hybrid:1}}
+  ]},
+  {id:"feedback", t:"When they need guidance or corrections, how do they prefer it?", o:[
+    {l:"One-on-one, direct attention from an adult", s:{one:3}},
+    {l:"In a group setting where they can learn alongside peers", s:{group:3}},
+    {l:"Independently: working through it alone and checking answers themselves", s:{self:3}},
+    {l:"Mostly on their own, with regular check-ins to keep them on track", s:{hybrid:3}}
+  ]},
+  {id:"age", t:"How old is your child?", o:[
+    {l:"Under 6", age:["Pre-K","K-2"], gl:"Pre-K"},
+    {l:"6 to 8", age:["K-2","Gr 3-5"], gl:"K-2"},
+    {l:"9 to 11", age:["Gr 3-5","Gr 6-8"], gl:"Gr 3-5"},
+    {l:"12 to 14", age:["Gr 6-8","Gr 9-12"], gl:"Gr 6-8"},
+    {l:"15 and up", age:["Gr 9-12"], gl:"Gr 9-12"}
+  ]},
+  {id:"need", t:"What do you most need help with right now?", o:[
+    {l:"Getting through a specific subject or catching up", s:{one:2}},
+    {l:"Trying something new alongside other kids", s:{group:2}},
+    {l:"Building a skill on our own time", s:{self:2}},
+    {l:"Structure, motivation, or direction rather than a subject", s:{coaching:5}}
+  ]}
+];
+
+var R = {
+  one:{name:"1-on-1 Teaching", page:"/1-to-1-teaching", fmt:["1-on-1 Teaching"],
+    head:"Your kid likely does best with a 1-on-1 educator.",
+    why:"Your answers point to a child who needs an adult's full attention to get unstuck, and a pace set around them.",
+    ask:["How do you adjust when my child freezes or shuts down?","What does a typical first session look like?","How will you tell me what's working and what isn't?"],
+    watch:"Look for educators who offer a trial or intro call. Fit matters more than credentials here."},
+  group:{name:"Online Group Classes", page:"/online-classes", fmt:["Online Group Classes"],
+    head:"Your kid likely does best in a small group class.",
+    why:"Your answers point to a child who gets energy from peers and learns by watching others work through it.",
+    ask:["What's the maximum class size?","How do you keep quieter kids involved?","What happens if we miss a session?"],
+    watch:"Check the class size and the time zone before anything else. A great class at the wrong hour doesn't work."},
+  self:{name:"Self-Paced Classes", page:"/self-paced", fmt:["Self Paced Classes"],
+    head:"Your kid likely does best with self-paced classes.",
+    why:"Your answers point to a family whose schedule moves, and a child who can work independently when the structure is flexible.",
+    ask:["Is there any way to ask the educator questions?","How long do we keep access?","How will I know my child is actually progressing?"],
+    watch:"Self-paced works best when there's still a human touchpoint. Ask what happens when your child gets stuck."},
+  coaching:{name:"Coaching & Mentoring", page:"/coaching", fmt:["Coaching & Mentoring"],
+    head:"What your kid may need most is a coach or mentor.",
+    why:"Your answers point to a need for structure, motivation, or direction more than another subject class.",
+    ask:["What does progress look like after three months?","How involved will I be as a parent?","How do you work with kids who resist at first?"],
+    watch:"Coaching is about the relationship. A short intro call is the best test."},
+  hybrid:{name:"a Hybrid mix", page:"/find-classes", fmt:["Self Paced Classes","Online Group Classes"], delivery:"Hybrid, mix of both",
+    head:"Your kid likely does best with a hybrid: independent work plus live check-ins.",
+    why:"Your answers point to a child who can work alone but needs a regular human touchpoint to stay on track.",
+    ask:["How often are the live check-ins?","What does my child do between sessions?","Can the live part move if we travel?"],
+    watch:"Look for classes that pair self-paced material with a live session or feedback loop."}
+};
+
+/* ===== STATE ===== */
+var state = {i:-1, ans:[], result:null, email:""};
+var app = document.getElementById("app");
+
+function track(name, p){
+  try{ if(window.gtag) gtag("event", name, p||{}); }catch(e){}
+  try{ window.parent.postMessage({lweaQuiz:name, params:p||{}}, "*"); }catch(e){}
+}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function decode(s){var t=document.createElement("textarea");t.innerHTML=s||"";return t.value;}
+
+/* ===== SCORING ===== */
+function score(ans){
+  var sc={one:0,group:0,self:0,coaching:0,hybrid:0}, tb=null;
+  ans.forEach(function(a,qi){
+    var o=Q[qi].o[a];
+    if(o.s) for(var k in o.s) sc[k]+=o.s[k];
+    if(qi===0) tb=o.tb;
+  });
+  var keys=Object.keys(sc).sort(function(a,b){return sc[b]-sc[a];});
+  var top=sc[keys[0]], tied=keys.filter(function(k){return sc[k]===top;});
+  var res;
+  if(tied.length===1) res=tied[0];
+  else if(tied.length===2 && tied.indexOf("self")>-1 && (tied.indexOf("one")>-1||tied.indexOf("group")>-1)) res="hybrid";
+  else if(tied.indexOf(tb)>-1) res=tb;
+  else res=tied[0];
+  return {key:res, scores:sc};
+}
+
+/* ===== SCREENS ===== */
+function intro(){
+  var m=/[?&]r=(one|group|self|coaching|hybrid)\b/.exec(location.search);
+  if(m && !state.result){state.result={key:m[1]};return showResult();}
+  track("quiz_view");
+  app.innerHTML='<span class="tag">2-MINUTE QUIZ</span><h1>Which kind of educator fits your kid?</h1>'+
+  '<p>Five quick questions about how your child learns and how your week runs. You\'ll get a match for the type of educator to look for, what to ask on the first call, and a few live listings to start with.</p>'+
+  '<button class="btn" id="go">Start the quiz</button>';
+  document.getElementById("go").onclick=function(){track("quiz_start");state.i=0;question();};
+}
+function question(){
+  var q=Q[state.i];
+  var h='<div class="bar"><i style="width:'+(state.i/Q.length*100)+'%"></i></div><p class="muted">Question '+(state.i+1)+' of '+Q.length+'</p><h2>'+esc(q.t)+'</h2>';
+  q.o.forEach(function(o,idx){h+='<button class="opt" data-i="'+idx+'">'+esc(o.l)+'</button>';});
+  if(state.i>0) h+='<button class="back" id="bk">&larr; Back</button>';
+  app.innerHTML=h;
+  [].forEach.call(app.querySelectorAll(".opt"),function(b){b.onclick=function(){
+    state.ans[state.i]=+b.dataset.i;
+    if(state.i<Q.length-1){state.i++;question();}else{state.result=score(state.ans);gate();}
+  };});
+  var bk=document.getElementById("bk"); if(bk) bk.onclick=function(){state.i--;question();};
+}
+function gate(){
+  track("quiz_complete",{result:state.result.key});
+  app.innerHTML='<div class="bar"><i style="width:100%"></i></div><span class="tag">YOUR RESULT IS READY</span><h2>Where should we send your breakdown?</h2>'+
+  '<p>You\'ll see your match on the next screen, along with the questions to ask an educator on a first call. We\'ll also email you our free guide, How to Find an Independent Educator.</p>'+
+  '<form id="f"><input type="email" id="em" placeholder="you@email.com" required autocomplete="email">'+
+  '<label class="consent"><input type="checkbox" id="cs" required><span>Yes, email me the guide and occasional notes from Learn with Every Avenue. Unsubscribe anytime.</span></label>'+
+  '<div class="err hide" id="er"></div><button class="btn" id="sb" type="submit">Show my result</button></form>';
+  document.getElementById("f").onsubmit=function(e){
+    e.preventDefault();
+    var em=document.getElementById("em").value.trim();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){var er=document.getElementById("er");er.textContent="That email doesn't look right.";er.className="err";return;}
+    state.email=em; document.getElementById("sb").disabled=true;
+    subscribe(em).then(function(){track("quiz_email",{result:state.result.key});showResult();});
+  };
+}
+function subscribe(email){
+  var m=CONFIG.mailerlite;
+  if(!m.formId||m.formId.indexOf("REPLACE")===0) return Promise.resolve();
+  var age=Q[3].o[state.ans[3]];
+  var body=new URLSearchParams();
+  body.append("fields[email]",email);
+  body.append("fields["+m.resultField+"]",R[state.result.key].name);
+  body.append("fields["+m.resultKeyField+"]",state.result.key);
+  body.append("fields["+m.gradeField+"]",age.gl);
+  body.append("ml-submit","1"); body.append("anticsrf","true");
+  return fetch("https://assets.mailerlite.com/jsonp/"+m.accountId+"/forms/"+m.formId+"/subscribe",
+    {method:"POST",mode:"no-cors",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:body.toString()}).catch(function(){});
+}
+function showResult(){
+  var r=R[state.result.key], age=Q[3].o[state.ans[3]]||null;
+  var link=CONFIG.site+r.page+"?"+CONFIG.utm+"&utm_content="+state.result.key;
+  var h='<span class="tag">YOUR MATCH</span><h1>'+esc(r.head)+'</h1><p>'+esc(r.why)+'</p>'+
+  '<div class="box"><h3>Ask any educator on the first call</h3><ul class="list">'+r.ask.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+'</ul>'+
+  '<p class="muted" style="margin:0">'+esc(r.watch)+'</p></div>'+
+  courseBox(state.result.key)+
+  '<div id="ls"><p class="muted">Finding educators&hellip;</p></div>'+
+  '<a class="btn" id="cta" href="'+link+'" target="_top">Browse '+esc(r.name)+'</a> '+
+  '<p class="muted" style="margin-top:14px">'+'<a href="#" id="rs">Retake the quiz</a></p>';
+  app.innerHTML=h;
+  document.getElementById("cta").onclick=function(){track("quiz_cta",{result:state.result.key});};
+  document.getElementById("rs").onclick=function(e){e.preventDefault();state={i:-1,ans:[],result:null,email:""};intro();};
+  loadListings(r,age);
+}
+function courseBox(key){
+  var c=CONFIG.course; if(!c.live||!c.url) return "";
+  var lead=(key==="self"||key==="coaching")?"Want to get your family's structure sorted first?":"Not ready to hire anyone yet?";
+  var sep=c.url.indexOf("?")>-1?"&":"?";
+  return '<div class="box"><h3>'+esc(lead)+'</h3><p style="margin:0 0 10px;font-size:14px">Our free six-module course, <b>'+esc(c.title)+'</b>, walks you through your child\'s learner profile, your family\'s real schedule, and how to find the right educator.</p>'+
+  '<a class="btn alt" target="_top" id="cc" href="'+esc(c.url+sep+CONFIG.utm+"&utm_content=course")+'" onclick="track(\'quiz_course_click\')">Start the free course</a></div>';
+}
+function algolia(filters){
+  var a=CONFIG.algolia;
+  return fetch("https://"+a.appId+"-dsn.algolia.net/1/indexes/"+a.index+"/query",{method:"POST",
+    headers:{"X-Algolia-Application-Id":a.appId,"X-Algolia-API-Key":a.apiKey,"Content-Type":"application/json"},
+    body:JSON.stringify({query:"",hitsPerPage:30,facetFilters:filters,attributesToRetrieve:["title","listing_url","thumbnail","format","class_rates","category","grades"]})})
+    .then(function(r){return r.json();}).then(function(j){return j.hits||[];});
+}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function loadListings(r,age){
+  var fmt=[r.fmt.map(function(f){return "format:"+f;})];
+  var base=r.delivery?[["delivery_method:"+r.delivery]]:fmt;
+  var grade=age?[age.age.map(function(g){return "grades:"+g;})]:[];
+  algolia(base.concat(grade)).then(function(h){
+    if(h.length>=3||r.delivery) return h;
+    return algolia(base);
+  }).then(function(h){
+    if(r.delivery && h.length<3) return algolia(fmt.concat(grade)).then(function(x){return h.concat(x);});
+    return h;
+  }).then(function(h){
+    var seen={}; h=h.filter(function(x){if(seen[x.listing_url])return false;seen[x.listing_url]=1;return true;});
+    h=shuffle(h).slice(0,3);
+    var el=document.getElementById("ls"); if(!el) return;
+    if(!h.length){el.innerHTML="";return;}
+    el.innerHTML='<h3 style="font-size:15px;margin:0 0 10px">A few to start with</h3>'+h.map(function(x){
+      return '<a class="lst" target="_top" href="'+esc(x.listing_url)+'?'+CONFIG.utm+'&utm_content=listing"><img alt="" src="'+esc(x.thumbnail||"")+'"><div><b>'+esc(decode(x.title))+'</b><span>'+esc(x.format||"")+(x.category?" · "+esc(x.category):"")+'</span></div></a>';
+    }).join("");
+  }).catch(function(){var el=document.getElementById("ls");if(el)el.innerHTML="";});
+}
+intro();
+</script>
+</body>
+</html>
