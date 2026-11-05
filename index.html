@@ -141,6 +141,21 @@ function track(name, p){
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
 function decode(s){var t=document.createElement("textarea");t.innerHTML=s||"";return t.value;}
 
+/* ===== HEIGHT MESSAGE (lets the BD page resize the iframe) ===== */
+var lastH = 0;
+function sendHeight(){
+  var h = Math.ceil(document.body.getBoundingClientRect().height);
+  if(!h || h === lastH) return;
+  lastH = h;
+  try{ window.parent.postMessage({lweaQuizHeight:h}, "*"); }catch(e){}
+}
+if(window.parent !== window){
+  if(window.ResizeObserver){ new ResizeObserver(sendHeight).observe(document.body); }
+  window.addEventListener("load", sendHeight);
+  window.addEventListener("resize", sendHeight);
+  setInterval(sendHeight, 1000);
+}
+
 /* ===== SCORING ===== */
 function score(ans){
   var sc={one:0,group:0,self:0,coaching:0,hybrid:0}, tb=null;
