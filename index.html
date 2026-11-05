@@ -59,7 +59,8 @@ var CONFIG = {
     accountId: "2280496",
     formId: "185345937360553843",   // LWEA Parents form (adds to LWEA Parents group, triggers Parent Emails Workflow)
     resultField: "quiz_result",
-    resultKeyField: "quiz_result_key",            // custom text field, must exist in MailerLite
+    resultKeyField: "quiz_result_key",
+    resultPageField: "quiz_result_page",            // custom text field, must exist in MailerLite
     gradeField: "grade_level"              // existing field
   },
   // Flip live to true and set url when Build Your Learning Life launches. Hidden until then.
@@ -203,6 +204,7 @@ function subscribe(email){
   body.append("fields[email]",email);
   body.append("fields["+m.resultField+"]",R[state.result.key].name);
   body.append("fields["+m.resultKeyField+"]",state.result.key);
+  body.append("fields["+m.resultPageField+"]",CONFIG.site+R[state.result.key].page);
   body.append("fields["+m.gradeField+"]",age.gl);
   body.append("ml-submit","1"); body.append("anticsrf","true");
   return fetch("https://assets.mailerlite.com/jsonp/"+m.accountId+"/forms/"+m.formId+"/subscribe",
